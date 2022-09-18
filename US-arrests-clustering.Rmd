@@ -1,0 +1,177 @@
+---
+title: "Basic - Hierarchical clustering on US Arrests"
+output:
+  html_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+# Libraries
+knitr::opts_chunk$set(echo = TRUE)
+
+library(cluster)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(plotly)
+library(data.table)
+library(caret)
+library(ggbiplot)
+library(tidyr)
+library(tidyverse)
+library(htmltools)
+library(Hmisc)
+library(factoextra)
+library(dummies)
+library(gridExtra)
+```
+
+## Introduction
+Clustering is the process of grouping data with similar features in large dataset. Data points in the same clusters or subgroup will exhibit same behavior, in other words observations of such data points will be similar to each other. Similarly, observations of data points from different cluster are much different from each other. 
+
+## Hierarchical Clustering:
+1. Hierarchical clustering is a general family of clustering algorithms that build nested clusters by merging or splitting them successively. This hierarchy of clusters is represented as a tree (or dendrogram). The root of the tree is the unique cluster that gathers all the samples, the leaves being the clusters with only one sample.
+2. The Agglomerative Clustering object performs a hierarchical clustering using a bottom up approach: each observation starts in its own cluster, and clusters are successively merged together.
+
+## Understanding dataset
+```{r USArrests, echo=TRUE}
+head(USArrests, 5)
+summary(USArrests)
+print('Dimension of dataset is as followws:')
+dim(USArrests)
+print('Column names in dataset is:')
+colnames(USArrests)
+describe(USArrests)
+```
+
+
+```{r}
+# checking for missing values
+sum(is.na(USArrests))
+sum(is.null(USArrests))
+head(USArrests,5)
+```
+## Hierarchical clustering with complete linkage and Euclidean distance
+**Linkage:**
+Linkage defines how to calculate distance between clusters containing multiple data points. Different methods of linkages are as follows
+* **Complete Linkage:** largest distance between elements of two clusters
+* **Single:** smallest distance between elements of two clusters
+* **Average:** Average dissimilarity between all elements of two clusters
+* **Centroid:** Dissimilarity between the centroids
+```{r}
+h_dist <- dist(USArrests,method = "euclidean")
+hc.complete <- hclust(h_dist, method = "complete")
+hc.average <- hclust(h_dist, method = "average")
+hc.single <- hclust(h_dist, method = "single")
+
+
+plot(hc.complete, main = "Complete Linkage",
+    xlab = "", sub = "", cex = .9)
+
+plot(hc.average, main = "Average Linkage",
+     xlab = "", sub = "", cex = .9)
+
+plot(hc.single, main = "Single Linkage",
+     xlab = "", sub = "", cex = .9)
+
+
+```
+
+Above plot clustering of states using hierarchical clustering with complete linkage and eucledian distance calculation. 
+
+## Clustering
+In this step, we are going to restrict the clusters by 3 using `cutree()` function.
+States fall under 3 clusters in following manner:
+**Cluster 1: 16 States**
+Nevada, Michigan, New York, Illinois, California, New Mexico,
+Arizona, Maryland, South Carolina, Mississippi, Alaska, Louisiana, Alabama,
+Delaware, North Carolina, Florida.
+**Cluster 2: 14 States**
+Vermont, North Dakota, South Dakota, Maine, West Virginia,
+New Hampshire, Iowa, Wisconsin, Minnesota, Hawaii, Kansas, Indiana,Idaho,
+Montana, Kentucky, Nebraska, Pennsylvania, Connecticut, Utah, Ohio.
+**Cluster 3: 20 States**
+New Jersey, Massachusetts, Washington, Virginia, Oklahoma,
+Oregon, Wyoming, Rhode Island, Texas, Colorado, Georgia, Tennessee,
+Arkansas, Missouri.
+
+```{r}
+
+hc_comp_tree = cutree(hc.complete, 3)
+
+hc_comp_tree
+
+clusplot(x = USArrests,
+         clus = hc_comp_tree,
+         lines = 0,
+         shade = FALSE,
+         color = TRUE,
+         labels = 2,
+         plotchar = FALSE,
+         span = TRUE,
+         main = "US Arrests States Clusters")
+```
+
+## Hierarchically cluster the states using complete linkage and Euclidean distance, after scaling the variables to have standard deviation one
+Scaling is performed over dataset by standardization method i.e. scaling the variables to have standard deviation of 1 and mean of 0.
+```{r}
+# Scaling
+df_us <- scale(USArrests)
+sd(df_us)
+h_scale_dist <- dist(df_us,method = "euclidean")
+hc_scale.complete <- hclust(h_scale_dist, method = "complete")
+hc_scale.average <- hclust(h_scale_dist, method = "average")
+hc_scale.single <- hclust(h_scale_dist, method = "single")
+
+plot(hc_scale.complete, main = "Complete Linkage - After Scaling",
+    xlab = "", sub = "", cex = .9)
+plot(hc_scale.average, main = "Average Linkage - After Scaling",
+     xlab = "", sub = "", cex = .9)
+plot(hc_scale.single, main = "Single Linkage - After Scaling",
+     xlab = "", sub = "", cex = .9)
+
+hc_Scale_comp_tree <- cutree(hc_scale.complete, 3)
+
+hc_Scale_comp_tree
+
+clusplot(x = df_us,
+         clus = hc_Scale_comp_tree,
+         lines = 0,
+         shade = FALSE,
+         color = TRUE,
+         labels = 2,
+         plotchar = FALSE,
+         span = TRUE,
+         main = "US Arrests States Clusters After Scaling")
+```
+From the above output, we can see that standard deviation is nearly 1 for the complete dataset.
+Above plot clearly explains the difference in clustering before and after scaling.
+
+## Effect of Scaling on the hierarchical clustering obtained
+* It is clear that clustering is much more accurate after scaling the dataset. We can clearly able to identify the clusters of every state without any convergence.
+* There is no overlapping issue after scaling but overlapping exists before scaling the dataset.
+Thus in order to achieve more accuracy in clustering, standardization is more important so that we can get much information about the structures of data points.
+
+```{r}
+clusplot(x = USArrests,
+         clus = hc_comp_tree,
+         lines = 0,
+         shade = FALSE,
+         color = TRUE,
+         labels = 2,
+         plotchar = FALSE,
+         span = TRUE,
+         main = "US Arrests States Clusters before scaling")
+
+clusplot(x = df_us,
+         clus = hc_Scale_comp_tree,
+         lines = 0,
+         shade = FALSE,
+         color = TRUE,
+         labels = 2,
+         plotchar = FALSE,
+         span = TRUE,
+         main = "US Arrests States Clusters After Scaling")
+```
